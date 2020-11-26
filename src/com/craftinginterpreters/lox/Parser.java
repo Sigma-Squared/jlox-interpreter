@@ -149,7 +149,7 @@ public class Parser {
             return new Node.Grouping(node);
         }
 
-        throw createParseError(peek(), "Expected expression.");
+        throw createParseError(peek(), "Does not start valid expression or statement.");
     }
 
     /*

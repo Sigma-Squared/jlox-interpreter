@@ -7,10 +7,13 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Scanner;
 
 public class Lox {
     static boolean hadError = false;
+    static boolean hadRuntimeError = false;
+
+    private static final Interpreter interpreter = new Interpreter();
+    private static final ASTPrinter ASTPrinter = new ASTPrinter();
 
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
@@ -27,6 +30,7 @@ public class Lox {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
         if (hadError) System.exit(65);
+        if (hadRuntimeError) System.exit(70);
     }
 
     private static void runPrompt() throws IOException {
@@ -51,7 +55,11 @@ public class Lox {
 
         if (hadError) return; // Stop if an error has occurred previously.
 
-        System.out.println(new AstPrinter().print(root));
+        System.out.println(ASTPrinter.stringify(root));
+
+        interpreter.interpret(root);
+        System.err.flush();
+        System.out.flush();
     }
 
     static void error(int line, String message) {
@@ -60,14 +68,19 @@ public class Lox {
 
     static void error(Token token, String message) {
         if (token.type == TokenType.EOF) {
-            report(token.line, " at end", message);
+            report(token.line, "at end", message);
         } else {
             report(token.line, "at '" + token.lexeme + "'", message);
         }
     }
 
     private static void report(int line, String where, String message) {
-        System.err.println(String.format("[line %d]: Error %s: %s", line, where, message));
+        System.out.printf("\u001B[31m[line %d]: Error %s: %s%n\u001B[0m", line, where, message);
         hadError = true;
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.out.printf("\u001B[31m[line %d]: %s\u001B[0m\n", error.token.line, error.getMessage());
+        hadRuntimeError = true;
     }
 }
